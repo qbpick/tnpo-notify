@@ -9,6 +9,11 @@ fastify.get("/", async function handler(request, reply) {
   return { hello: "world" };
 });
 
+fastify.get("/webhook", async function handler(request, reply) {
+  console.log(request.body)
+  return { hello: "world" };
+});
+
 // Run the server!
 try {
   await fastify.listen({ port: 3000 });

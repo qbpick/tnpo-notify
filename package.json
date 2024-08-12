@@ -4,7 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -p tsconfig.json",
+    "start": "node index.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,5 +15,10 @@
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
     "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@tsconfig/node21": "^21.0.3",
+    "@types/node": "^22.1.0",
+    "typescript": "^5.5.4"
   }
 }

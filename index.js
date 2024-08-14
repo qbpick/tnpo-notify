@@ -41,7 +41,7 @@ const sendNotification = async (data) => {
 // devMessage(request)
 // ❌✅
 // 🔴🟢
-fastify.post("/webhook", async function handler(request, reply) {
+fastify.post("/notification", async function handler(request, reply) {
     await sendNotification(request.body);
     return reply.send({ ok: true });
 });

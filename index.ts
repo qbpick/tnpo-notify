@@ -1,13 +1,24 @@
 // Import the framework and instantiate it
 import "dotenv/config";
-import Fastify, { FastifyRequest, RouteGenericInterface } from "fastify";
+import Fastify, { FastifyRequest } from "fastify";
 import { Telegraf } from "telegraf";
-import { bold, code, FmtString, pre } from "telegraf/format";
+import { code } from "telegraf/format";
+import { IPipelineNotify } from "./interfaces/pipline-notify.js";
 
 const fastify = Fastify({
   logger: true,
 });
 const bot = new Telegraf(process.env.API_TELEGRAM_BOT_KEY || "");
+
+fastify.setErrorHandler((error, request, reply) => {
+  reply.status(500).send({ ok: false, error: error });
+});
+
+bot.command("start", (ctx) => {
+  console.log(ctx.update.message.chat);
+  console.log(ctx.update.message);
+  ctx.reply("Hello!");
+});
 
 const devMessage = (request: FastifyRequest) =>
   code(
@@ -19,39 +30,36 @@ const devMessage = (request: FastifyRequest) =>
       JSON.stringify(request.query, null, 2)
   );
 
-interface IPipelineNotify {
-  type: string;
-  result: string;
-  branch: string;
-  project: string;
-  title: string;
-}
-
 const pipelineTemplate = (data: IPipelineNotify) => `
-🟢 🟢 🟢
-🟢 🟢 🔴
-❌ ❌ ❌
-❌ ✅ ✅
-✅ ✅ ❌
-<b><i>${data.result}</i></b>
-<b>Pipline</b> ${data.type}
-<b>Ветка</b> ${data.branch}
-<b>Коммит</b> ${data.title}
+${data.result === data.expected_result ? "🟢" : "🔴"}
+<b>Ветка:</b> ${data.branch}
+<b>Коммит:</b> ${data.title}
 
-<pre><code class="json">${JSON.stringify(data, null, 2)}</code></pre>
+${
+  data.result !== data.expected_result
+    ? `Последний успешный stage: <b><i>${data.result}</i></b>`
+    : ""
+}
+${data.result !== data.expected_result ? data.CI_PIPELINE_URL : ""}
 `;
+
+// <pre><code class="json">${JSON.stringify(data, null, 2)}</code></pre>
+
+const sendNotification = async (data: IPipelineNotify) => {
+  await bot.telegram.sendMessage("-100" + data.chatId, pipelineTemplate(data), {
+    parse_mode: "HTML",
+    message_thread_id: Number(data.topicId),
+  });
+};
 
 // devMessage(request)
 // ❌✅
 // 🔴🟢
-fastify.post("/webhook", async function handler(request, reply) {
-  bot.telegram.sendMessage(
-    process.env.ID_TELEGRAM_CHAT || "",
-    pipelineTemplate(request.body as IPipelineNotify),
-    { parse_mode: "HTML" }
-  );
+fastify.post("/notification", async function handler(request, reply) {
+  await sendNotification(request.body as IPipelineNotify);
   return reply.send({ ok: true });
 });
+
 // Run the server!
 try {
   await fastify.listen({ port: 80, host: "0.0.0.0" });
